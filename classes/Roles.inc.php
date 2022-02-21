@@ -15,4 +15,33 @@ class Roles
 		$this->role3 = !empty($rowData['role3']) ? $rowData['role3'] : null;
 		$this->role4 = !empty($rowData['role4']) ? $rowData['role4'] : null;
 	}
+
+	/**
+	 * @throws Exception
+	 */
+	public function getUserGroupIds(Context $context): array
+	{
+		$groupIds = [];
+
+		/** @var UserGroupDAO $userGroupDao */
+		$userGroupDao = DAORegistry::getDAO('UserGroupDAO');
+
+		$assignedRoles = [$this->role1, $this->role2, $this->role3, $this->role4];
+		$allowedRoles = ['Reader', 'Author', 'Reviewer'];
+		$nameToRolls = [
+			'Reader' => ROLE_ID_READER,
+			'Author' => ROLE_ID_AUTHOR,
+			'Reviewer' => ROLE_ID_REVIEWER,
+		];
+
+		foreach ($assignedRoles as $assignedRole) {
+			if (!in_array($allowedRoles, $assignedRole) || $assignedRole !== null) {
+				throw new Exception("Invalid role provided");
+			}
+
+			$groupIds[] = $userGroupDao->getDefaultByRoleId($context->getId(), $nameToRolls[$assignedRole])->getId();
+		}
+
+		return $groupIds;
+	}
 }

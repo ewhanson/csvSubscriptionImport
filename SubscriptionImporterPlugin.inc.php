@@ -74,20 +74,32 @@ class SubscriptionImporterPlugin extends ImportExportPlugin
 	private function initialSetup(): void
 	{
 		try {
-			$this->setSubscribers();
 			$this->setContext();
+			$this->setSubscribers();
 		} catch (Exception $exception) {
 			echo $exception->getMessage() . PHP_EOL;
 			exit();
 		}
 	}
 
+	/**
+	 * @throws Exception
+	 */
 	private function processSubscriber(Subscriber $subscriber)
 	{
+		/** @var IndividualSubscriptionDAO $individualSubscriptionDao */
+		$individualSubscriptionDao = DAORegistry::getDAO('IndividualSubscriptionDAO');
+
 		// Check if user exists
 		if ($subscriber->hasExistingUser()) {
-			// If they do, update their subscription expiry and status
-			$this->updateSubscriptionStatus($this->context, $subscriber);
+			// If they do, check if they have an existing subscription
+			if ($individualSubscriptionDao->subscriptionExistsByUserForJournal($subscriber->getUser()->getId(), $this->context->getId())) {
+				// If so, update their subscription expiry and status
+				$this->updateSubscriptionStatus($this->context, $subscriber);
+			} else {
+				// Otherwise, create a new subscription for the user
+				$this->addNewSubscription($this->context, $subscriber);
+			}
 		} else {
 			// Otherwise, create a new user
 			$subscriber->createUser();
@@ -102,9 +114,17 @@ class SubscriptionImporterPlugin extends ImportExportPlugin
 	 * @param Context $context
 	 * @param Subscriber $subscriber
 	 * @return void
+	 * @throws Exception
 	 */
 	private function updateSubscriptionStatus(Context $context, Subscriber $subscriber): void
 	{
+		/** @var IndividualSubscriptionDAO $individualSubscriptionDao */
+		$individualSubscriptionDao = DAORegistry::getDAO('IndividualSubscriptionDAO');
+
+		$subscription = $individualSubscriptionDao->getByUserIdForJournal($subscriber->getUser()->getId(), $context->getId());
+		$subscription->setDateEnd(date('Y-m-d', $subscriber->endDate));
+
+		$individualSubscriptionDao->updateObject($subscription);
 
 	}
 
@@ -114,6 +134,7 @@ class SubscriptionImporterPlugin extends ImportExportPlugin
 	 * @param Context $context
 	 * @param Subscriber $subscriber
 	 * @return void
+	 * @throws Exception
 	 */
 	private function addNewSubscription(Context $context, Subscriber $subscriber)
 	{
@@ -171,12 +192,18 @@ class SubscriptionImporterPlugin extends ImportExportPlugin
 		return __('plugins.importexport.native.description');
 	}
 
+	/**
+	 * @throws Exception
+	 */
 	private function setSubscribers(): void
 	{
 		$rows = [];
-		CSVHelpers::csvToArray($this->filename, $rows);
+		$status = CSVHelpers::csvToArray($this->filename, $rows);
+		if (!$status) {
+			throw new Exception('CSV parsing was not successful.');
+		}
 		foreach ($rows as $row) {
-			$this->subscribers[] = new Subscriber($row, $this->subscriptionTypeId);
+			$this->subscribers[] = new Subscriber($row, $this->subscriptionTypeId, $this->context);
 		}
 	}
 
