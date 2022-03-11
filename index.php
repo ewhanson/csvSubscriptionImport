@@ -12,6 +12,8 @@
  *
  */
 
+namespace PKP\Plugins\ImportExport\SubscriptionImporter;
+
 require_once('SubscriptionImporterPlugin.inc.php');
 
 return new SubscriptionImporterPlugin();

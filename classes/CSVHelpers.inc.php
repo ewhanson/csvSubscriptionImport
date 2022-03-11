@@ -1,5 +1,7 @@
 <?php
 
+namespace PKP\Plugins\ImportExport\SubscriptionImporter\classes;
+
 class CSVHelpers
 {
 	/**
@@ -34,13 +36,37 @@ class CSVHelpers
 	}
 
 	/**
+	 * Writes associative array out to a CSV. Inserts array keys as header row.
+	 *
+	 * @param array $data
+	 * @param string $filePath
+	 * @param array|null $headerData
+	 * @return bool
+	 */
+	public static function arrayToCsv(array $data, string $filePath, ?array $headerData = null): bool
+	{
+		try {
+			if ($headerData !== null) {
+				array_unshift($data, $headerData);
+			}
+			$splFile = new \SplFileObject($filePath, 'w');
+			foreach ($data as $row) {
+				$splFile->fputcsv($row);
+			}
+			return true;
+		} catch (\Exception $e) {
+			return false;
+		}
+	}
+
+	/**
 	 * Removes zero width space characters that affect the rows in CSV files
 	 * From: https://gist.github.com/ahmadazimi/b1f1b8f626d73728f7aa
 	 *
-	 * @param string $text
+	 * @param string[] $text
 	 * @return string|string[]|null
 	 */
-	public static function removeZeroWidthSpaces(string $text)
+	public static function removeZeroWidthSpaces(array $text)
 	{
 		return preg_replace('/[\x{200B}-\x{200D}\x{FEFF}\x{00A0}]/u', '', $text);
 	}

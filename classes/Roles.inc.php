@@ -1,5 +1,12 @@
 <?php
 
+namespace PKP\Plugins\ImportExport\SubscriptionImporter\classes;
+
+use Context;
+use DAORegistry;
+use Exception;
+use UserGroupDAO;
+
 class Roles
 {
 	/** @var string At least one role is required */
@@ -28,18 +35,20 @@ class Roles
 
 		$assignedRoles = [$this->role1, $this->role2, $this->role3, $this->role4];
 		$allowedRoles = ['Reader', 'Author', 'Reviewer'];
-		$nameToRolls = [
+		$nameToRoles = [
 			'Reader' => ROLE_ID_READER,
 			'Author' => ROLE_ID_AUTHOR,
 			'Reviewer' => ROLE_ID_REVIEWER,
 		];
 
 		foreach ($assignedRoles as $assignedRole) {
-			if (!in_array($allowedRoles, $assignedRole) || $assignedRole !== null) {
+			if (in_array($assignedRole, $allowedRoles) === false && $assignedRole !== null) {
 				throw new Exception("Invalid role provided");
 			}
 
-			$groupIds[] = $userGroupDao->getDefaultByRoleId($context->getId(), $nameToRolls[$assignedRole])->getId();
+			if ($assignedRole !== null) {
+				$groupIds[] = $userGroupDao->getDefaultByRoleId($context->getId(), $nameToRoles[$assignedRole])->getId();
+			}
 		}
 
 		return $groupIds;

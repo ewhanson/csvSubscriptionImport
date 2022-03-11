@@ -13,27 +13,59 @@
  * @brief CSV import plugin for updating and adding user subscriptions
  */
 
+namespace PKP\Plugins\ImportExport\SubscriptionImporter;
+
+use PKP\Plugins\ImportExport\SubscriptionImporter\classes\CSVHelpers;
+use PKP\Plugins\ImportExport\SubscriptionImporter\classes\Subscriber;
+
 import('lib.pkp.classes.plugins.ImportExportPlugin');
 
-class SubscriptionImporterPlugin extends ImportExportPlugin
+class SubscriptionImporterPlugin extends \ImportExportPlugin
 {
 
 	/** @var Subscriber[] */
 	protected array $subscribers = [];
 	protected string $filename;
 	protected string $journalPath;
+	protected bool $isTest = false;
 
-	private Context $context;
+	private \Context $context;
 	private int $subscriptionTypeId;
 
 	/** @var array Subscriber[] */
 	private array $failedSubscribers = [];
 
+	/** @var array Subscriber[] */
+	private array $newSubscribers = [];
+
 	function register($category, $path, $mainContextId = null)
 	{
 		$success = parent::register($category, $path, $mainContextId);
 		$this->addLocaleData();
+		$this->useAutoLoader();
 		return $success;
+	}
+
+	/**
+	 * Registers a custom autoloader to handle the plugin namespace
+	 */
+	private function useAutoLoader()
+	{
+		spl_autoload_register(function ($className) {
+			// Removes the base namespace from the class name
+			$path = explode(__NAMESPACE__ . '\\', $className, 2);
+			if (!reset($path)) {
+				// Breaks the remaining class name by \ to retrieve the folder and class name
+				$path = explode('\\', end($path));
+				$class = array_pop($path);
+				$path = array_map(function ($name) {
+					return strtolower($name[0]) . substr($name, 1);
+				}, $path);
+				$path[] = $class;
+				// Uses the internal loader
+				$this->import(implode('.', $path));
+			}
+		});
 	}
 
 	/**
@@ -41,11 +73,20 @@ class SubscriptionImporterPlugin extends ImportExportPlugin
 	 */
 	function executeCLI($scriptName, &$args)
 	{
-		AppLocale::requireComponents(LOCALE_COMPONENT_APP_COMMON);
+		if (count($args) <=4) {
+			$this->usage($scriptName);
+			exit();
+		}
+
+		\AppLocale::requireComponents(LOCALE_COMPONENT_APP_COMMON);
 
 		$this->filename = array_shift($args);
 		$this->journalPath = array_shift($args);
 		$this->subscriptionTypeId = array_shift($args);
+		$outputCsvPath = array_shift($args);
+		if (array_shift($args)) {
+			$this->isTest = true;
+		}
 
 		if (!$this->filename || !$this->journalPath || !$this->subscriptionTypeId) {
 			$this->usage($scriptName);
@@ -56,19 +97,27 @@ class SubscriptionImporterPlugin extends ImportExportPlugin
 			echo __('plugins.importexport.subscriptionImporter.fileDoesNotExist', array('filename' => $this->filename)) . "\n";
 			exit();
 		}
-			$this->initialSetup();
+		$this->initialSetup();
+		echo "Processing " . count($this->subscribers) . " users." . PHP_EOL . "---------------------------" . PHP_EOL;
 
-			foreach ($this->subscribers as $subscriber) {
-				try {
-					$this->processSubscriber($subscriber);
-				} catch(Exception $exception) {
-					$this->failedSubscribers[] = $subscriber;
-					echo $exception->getMessage() . ' -- ' . 'Failed to process subscription for ' . $subscriber->email. PHP_EOL;
-					continue;
-				}
+
+		foreach ($this->subscribers as $subscriber) {
+			try {
+				$this->processSubscriber($subscriber);
+			} catch(\Exception $exception) {
+				$this->failedSubscribers[] = $subscriber;
+				$subscriber->setStatus(Subscriber::STATUS_ERROR);
+				echo '[' . $exception->getMessage() . '] '
+					. 'Failed to process subscription for ' . $subscriber->email. PHP_EOL;
+				continue;
 			}
+			echo $subscriber->email . " -- " . $subscriber->status . PHP_EOL;
+		}
 
-			// TODO: Handle failed subscribers somehow at end
+		// TODO: Handle failed subscribers somehow at end?
+		CSVHelpers::arrayToCsv($this->subscribersToArray(), $outputCsvPath, Subscriber::getArrayKeys());
+		echo "----------------------" . PHP_EOL . "Finished. Processed " . count($this->subscribers) . "(" .
+			count($this->newSubscribers) . " new, " . count($this->failedSubscribers) . " errors)" .PHP_EOL;
 	}
 
 	private function initialSetup(): void
@@ -76,19 +125,19 @@ class SubscriptionImporterPlugin extends ImportExportPlugin
 		try {
 			$this->setContext();
 			$this->setSubscribers();
-		} catch (Exception $exception) {
+		} catch (\Exception $exception) {
 			echo $exception->getMessage() . PHP_EOL;
 			exit();
 		}
 	}
 
 	/**
-	 * @throws Exception
+	 * @throws \Exception
 	 */
 	private function processSubscriber(Subscriber $subscriber)
 	{
-		/** @var IndividualSubscriptionDAO $individualSubscriptionDao */
-		$individualSubscriptionDao = DAORegistry::getDAO('IndividualSubscriptionDAO');
+		/** @var \IndividualSubscriptionDAO $individualSubscriptionDao */
+		$individualSubscriptionDao = \DAORegistry::getDAO('IndividualSubscriptionDAO');
 
 		// Check if user exists
 		if ($subscriber->hasExistingUser()) {
@@ -100,46 +149,49 @@ class SubscriptionImporterPlugin extends ImportExportPlugin
 				// Otherwise, create a new subscription for the user
 				$this->addNewSubscription($this->context, $subscriber);
 			}
+			$subscriber->setStatus(Subscriber::STATUS_UPDATED);
 		} else {
 			// Otherwise, create a new user
 			$subscriber->createUser();
+			// Add to new user list
+			$this->newSubscribers[] = $subscriber;
 			// Grant subscription access
 			$this->addNewSubscription($this->context, $subscriber);
+			$subscriber->setStatus(Subscriber::STATUS_NEW);
 		}
 	}
 
 	/**
 	 * Update the subscription expiry date and status for an existing user subscription
 	 *
-	 * @param Context $context
+	 * @param \Context $context
 	 * @param Subscriber $subscriber
 	 * @return void
-	 * @throws Exception
+	 * @throws \Exception
 	 */
-	private function updateSubscriptionStatus(Context $context, Subscriber $subscriber): void
+	private function updateSubscriptionStatus(\Context $context, Subscriber $subscriber): void
 	{
-		/** @var IndividualSubscriptionDAO $individualSubscriptionDao */
-		$individualSubscriptionDao = DAORegistry::getDAO('IndividualSubscriptionDAO');
+		/** @var \IndividualSubscriptionDAO $individualSubscriptionDao */
+		$individualSubscriptionDao = \DAORegistry::getDAO('IndividualSubscriptionDAO');
 
 		$subscription = $individualSubscriptionDao->getByUserIdForJournal($subscriber->getUser()->getId(), $context->getId());
-		$subscription->setDateEnd(date('Y-m-d', $subscriber->endDate));
+		$subscription->setDateEnd($subscriber->endDate->format('Y-m-d'));
 
 		$individualSubscriptionDao->updateObject($subscription);
-
 	}
 
 	/**
 	 * Add a subscription for a new user without a previous subscription.
 	 *
-	 * @param Context $context
+	 * @param \Context $context
 	 * @param Subscriber $subscriber
 	 * @return void
-	 * @throws Exception
+	 * @throws \Exception
 	 */
-	private function addNewSubscription(Context $context, Subscriber $subscriber)
+	private function addNewSubscription(\Context $context, Subscriber $subscriber)
 	{
-		/** @var $individualSubscriptionDao IndividualSubscriptionDAO */
-		$individualSubscriptionDao = DAORegistry::getDAO('IndividualSubscriptionDAO');
+		/** @var $individualSubscriptionDao \IndividualSubscriptionDAO */
+		$individualSubscriptionDao = \DAORegistry::getDAO('IndividualSubscriptionDAO');
 
 		$subscription = $individualSubscriptionDao->newDataObject();
 
@@ -151,8 +203,8 @@ class SubscriptionImporterPlugin extends ImportExportPlugin
 		$subscription->setStatus(SUBSCRIPTION_STATUS_ACTIVE);
 		$subscription->setTypeId($subscriber->subscriptionTypeId);
 		$subscription->setMembership(null);
-		$subscription->setDateStart(date('Y-m-d', $subscriber->startDate));
-		$subscription->setDateEnd(date('Y-m-d', $subscriber->endDate));
+		$subscription->setDateStart($subscriber->startDate->format('Y-m-d'));
+		$subscription->setDateEnd($subscriber->endDate->format('Y-m-d'));
 
 		$individualSubscriptionDao->insertObject($subscription);
 	}
@@ -193,33 +245,45 @@ class SubscriptionImporterPlugin extends ImportExportPlugin
 	}
 
 	/**
-	 * @throws Exception
+	 * @throws \Exception
 	 */
 	private function setSubscribers(): void
 	{
 		$rows = [];
 		$status = CSVHelpers::csvToArray($this->filename, $rows);
 		if (!$status) {
-			throw new Exception('CSV parsing was not successful.');
+			throw new \Exception('CSV parsing was not successful.');
 		}
 		foreach ($rows as $row) {
-			$this->subscribers[] = new Subscriber($row, $this->subscriptionTypeId, $this->context);
+			$this->subscribers[] = new Subscriber($row, $this->subscriptionTypeId, $this->context, $this->isTest);
 		}
 	}
 
 	/**
-	 * @throws Exception
+	 * @throws \Exception
 	 */
 	private function setContext()
 	{
-		/** @var JournalDAO $journalDao */
-		$journalDao = DAORegistry::getDAO('JournalDAO');
+		/** @var \JournalDAO $journalDao */
+		$journalDao = \DAORegistry::getDAO('JournalDAO');
 		$context = $journalDao->getByPath($this->journalPath);
 
 		if (!$context) {
-			throw new Exception("Context not found");
+			throw new \Exception("Context not found");
 		}
 
 		$this->context = $context;
+	}
+
+	// TODO: Investigate turning into generator so this array and array of Subscribers aren't loaded
+	//	 into memory at the same time.
+	private function subscribersToArray(): array
+	{
+		$data = [];
+		foreach ($this->subscribers as $subscriber) {
+			$data[] = $subscriber->toArray();
+		}
+
+		return $data;
 	}
 }

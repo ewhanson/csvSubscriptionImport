@@ -12,10 +12,10 @@ msgstr ""
 "Language: \n"
 
 msgid "plugins.importexport.subscriptionImporter.displayName"
-msgstr "Comma Delimited Content Import Plugin"
+msgstr "Subscription Importer Plugin"
 
 msgid "plugins.importexport.subscriptionImporter.description"
-msgstr "Import data into journal from comma delimited data."
+msgstr "Import user subscription details from comma delimited data."
 
 msgid "plugins.importexport.subscriptionImporter.cliOnly"
 msgstr ""
@@ -27,10 +27,10 @@ msgstr ""
 
 msgid "plugins.importexport.subscriptionImporter.cliUsage"
 msgstr ""
-"Command-line tool for importing CSV data into OMP\n"
+"Command-line tool for updating user subscription information in OJS\n"
 "\t\t\tUsage:\n"
-"\t\t\t{$scriptName} [--dry-run] fileName.csv [journal_path]\n"
-"\t\t\tThe --dry-run option can be used to test without making changes.\n"
+"\t\t\t{$scriptName} fileName.csv [journal_path] [subscription_type_id] outputFile.csv [--test]\n"
+"\t\t\tThe --test option can be used to append 'test' at the end of user emails.\n"
 ""
 
 msgid "plugins.importexport.subscriptionImporter.fileDoesNotExist"
