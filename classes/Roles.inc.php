@@ -10,12 +10,18 @@ use UserGroupDAO;
 class Roles
 {
 	/** @var string At least one role is required */
-	public string $role1;
-	public ?string $role2;
-	public ?string $role3;
-	public ?string $role4;
+	public $role1;
+	/** @var string|null  */
+	public $role2;
+	/** @var string|null  */
+	public $role3;
+	/** @var string|null  */
+	public $role4;
 
-	public function __construct(array $rowData)
+	/**
+	 * @param array $rowData
+	 */
+	public function __construct($rowData)
 	{
 		$this->role1 = !empty($rowData['role1']) ? $rowData['role1'] : 'Reader';
 		$this->role2 = !empty($rowData['role2']) ? $rowData['role2'] : null;
@@ -24,9 +30,10 @@ class Roles
 	}
 
 	/**
+	 * @param Context $context
 	 * @throws Exception
 	 */
-	public function getUserGroupIds(Context $context): array
+	public function getUserGroupIds($context)
 	{
 		$groupIds = [];
 

@@ -17,23 +17,44 @@ class Subscriber
 	public const STATUS_UPDATED = 'updated';
 	public const STATUS_ERROR = 'error';
 
-	public string $firstName;
-	public string $lastName;
-	public string $email;
-	public ?string $affiliation = null;
-	public string $country;
-	public ?string $username = null;
-	public ?string $tempPassword = null;
-	public Roles $roles;
-	public DateTime $startDate;
-	public DateTime $endDate;
-	public int $subscriptionTypeId;
-	public string $status;
+	/** @var string  */
+	public $firstName;
+	/** @var string  */
+	public $lastName;
+	/** @var string  */
+	public $email;
+	/** @var string|null  */
+	public $affiliation = null;
+	/** @var string  */
+	public $country;
+	/** @var string|null  */
+	public $username = null;
+	/** @var string|null  */
+	public $tempPassword = null;
+	/** @var Roles  */
+	public $roles;
+	/** @var DateTime|false */
+	public $startDate;
+	/** @var DateTime|false  */
+	public $endDate;
+	/** @var int  */
+	public $subscriptionTypeId;
+	/** @var string  */
+	public $status;
 
-	protected ?User $user = null;
-	protected Context $context;
+	/** @var User|null  */
+	protected $user = null;
+	/** @var Context  */
+	protected $context;
 
-	public function __construct(array $rowData, int $subscriptionTypeId, Context $context, bool $isTest, string $dateFormat = 'Y-m-d')
+	/**
+	 * @param array $rowData
+	 * @param int $subscriptionTypeId
+	 * @param Context $context
+	 * @param bool $isTest
+	 * @param string $dateFormat
+	 */
+	public function __construct($rowData, $subscriptionTypeId, $context, $isTest, $dateFormat = 'Y-m-d')
 	{
 		$this->firstName = $rowData['firstname'];
 		$this->lastName = $rowData['lastname'];
@@ -58,7 +79,7 @@ class Subscriber
 	 *
 	 * @return bool
 	 */
-	public function hasExistingUser(): bool
+	public function hasExistingUser()
 	{
 		/** @var UserDAO $userDao */
 		$userDao = DAORegistry::getDAO('UserDAO');
@@ -81,7 +102,7 @@ class Subscriber
 	 * @return void
 	 * @throws Exception
 	 */
-	public function createUser(): void
+	public function createUser()
 	{
 		/** @var UserDAO $userDao */
 		$userDao = DAORegistry::getDAO('UserDAO');
@@ -130,7 +151,7 @@ class Subscriber
 	 * @return User|null
 	 * @throws Exception
 	 */
-	public function getUser(): ?User
+	public function getUser()
 	{
 		if ($this->user === null) {
 			throw new Exception('No user found. A user must be created or exist at this point');
@@ -143,7 +164,7 @@ class Subscriber
 	 *
 	 * @return array
 	 */
-	public function toArray(): array
+	public function toArray()
 	{
 		return [
 			'firstname' => $this->firstName,
@@ -157,7 +178,11 @@ class Subscriber
 		];
 	}
 
-	public function setStatus(string $status)
+	/**
+	 * @param string $status
+	 * @return void
+	 */
+	public function setStatus($status)
 	{
 		$this->status = $status;
 	}
@@ -167,7 +192,7 @@ class Subscriber
 	 *
 	 * @return string[]
 	 */
-	static public function getArrayKeys(): array
+	static public function getArrayKeys()
 	{
 		return [
 			'firstname',
@@ -187,7 +212,7 @@ class Subscriber
 	 * @param int $iterations
 	 * @return string
 	 */
-	private function generateNewUsername(UserDAO $userDao, int $iterations = 0): string
+	private function generateNewUsername($userDao, $iterations = 0)
 	{
 		$username = str_replace(' ', '', strtolower($this->lastName)) . str_split(strtolower($this->firstName))[0];
 		if ($iterations != 0) {

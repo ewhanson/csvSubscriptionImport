@@ -11,7 +11,7 @@ class CSVHelpers
 	 * @param array $dataOutput
 	 * @return bool
 	 */
-	public static function csvToArray(string $filePath, array &$dataOutput): bool
+	public static function csvToArray($filePath, &$dataOutput)
 	{
 		if (!file_exists($filePath) || !is_readable($filePath) || is_dir($filePath))
 			return false;
@@ -43,7 +43,7 @@ class CSVHelpers
 	 * @param array|null $headerData
 	 * @return bool
 	 */
-	public static function arrayToCsv(array $data, string $filePath, ?array $headerData = null): bool
+	public static function arrayToCsv($data, $filePath, $headerData = null)
 	{
 		try {
 			if ($headerData !== null) {
@@ -66,7 +66,7 @@ class CSVHelpers
 	 * @param string[] $text
 	 * @return string|string[]|null
 	 */
-	public static function removeZeroWidthSpaces(array $text)
+	public static function removeZeroWidthSpaces($text)
 	{
 		return preg_replace('/[\x{200B}-\x{200D}\x{FEFF}\x{00A0}]/u', '', $text);
 	}

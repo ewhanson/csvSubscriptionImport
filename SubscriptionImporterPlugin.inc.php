@@ -24,19 +24,20 @@ class SubscriptionImporterPlugin extends \ImportExportPlugin
 {
 
 	/** @var Subscriber[] */
-	protected array $subscribers = [];
-	protected string $filename;
-	protected string $journalPath;
-	protected bool $isTest = false;
+	protected $subscribers = [];
+	protected $filename;
+	protected $journalPath;
+	protected $isTest = false;
 
-	private \Context $context;
-	private int $subscriptionTypeId;
+	/** @var \Context */
+	private $context;
+	private $subscriptionTypeId;
 
-	/** @var array Subscriber[] */
-	private array $failedSubscribers = [];
+	/** @var Subscriber[] */
+	private $failedSubscribers = [];
 
-	/** @var array Subscriber[] */
-	private array $newSubscribers = [];
+	/** @var Subscriber[] */
+	private $newSubscribers = [];
 
 	function register($category, $path, $mainContextId = null)
 	{
@@ -120,7 +121,7 @@ class SubscriptionImporterPlugin extends \ImportExportPlugin
 			count($this->newSubscribers) . " new, " . count($this->failedSubscribers) . " errors)" .PHP_EOL;
 	}
 
-	private function initialSetup(): void
+	private function initialSetup()
 	{
 		try {
 			$this->setContext();
@@ -132,9 +133,10 @@ class SubscriptionImporterPlugin extends \ImportExportPlugin
 	}
 
 	/**
+	 * @param Subscriber $subscriber
 	 * @throws \Exception
 	 */
-	private function processSubscriber(Subscriber $subscriber)
+	private function processSubscriber($subscriber)
 	{
 		/** @var \IndividualSubscriptionDAO $individualSubscriptionDao */
 		$individualSubscriptionDao = \DAORegistry::getDAO('IndividualSubscriptionDAO');
@@ -169,7 +171,7 @@ class SubscriptionImporterPlugin extends \ImportExportPlugin
 	 * @return void
 	 * @throws \Exception
 	 */
-	private function updateSubscriptionStatus(\Context $context, Subscriber $subscriber): void
+	private function updateSubscriptionStatus($context, $subscriber)
 	{
 		/** @var \IndividualSubscriptionDAO $individualSubscriptionDao */
 		$individualSubscriptionDao = \DAORegistry::getDAO('IndividualSubscriptionDAO');
@@ -188,7 +190,7 @@ class SubscriptionImporterPlugin extends \ImportExportPlugin
 	 * @return void
 	 * @throws \Exception
 	 */
-	private function addNewSubscription(\Context $context, Subscriber $subscriber)
+	private function addNewSubscription($context, $subscriber)
 	{
 		/** @var $individualSubscriptionDao \IndividualSubscriptionDAO */
 		$individualSubscriptionDao = \DAORegistry::getDAO('IndividualSubscriptionDAO');
@@ -247,7 +249,7 @@ class SubscriptionImporterPlugin extends \ImportExportPlugin
 	/**
 	 * @throws \Exception
 	 */
-	private function setSubscribers(): void
+	private function setSubscribers()
 	{
 		$rows = [];
 		$status = CSVHelpers::csvToArray($this->filename, $rows);
@@ -277,7 +279,7 @@ class SubscriptionImporterPlugin extends \ImportExportPlugin
 
 	// TODO: Investigate turning into generator so this array and array of Subscribers aren't loaded
 	//	 into memory at the same time.
-	private function subscribersToArray(): array
+	private function subscribersToArray()
 	{
 		$data = [];
 		foreach ($this->subscribers as $subscriber) {
