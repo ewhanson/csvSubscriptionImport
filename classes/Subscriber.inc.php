@@ -58,7 +58,7 @@ class Subscriber
 	{
 		$this->firstName = $rowData['firstname'];
 		$this->lastName = $rowData['lastname'];
-		$this->email = $isTest ? $rowData['email'] . 'test' : $rowData;
+		$this->email = $isTest ? $rowData['email'] . 'test' : $rowData['email'];
 		$this->affiliation = !empty($rowData['affiliation']) ? $rowData['affiliation'] : null;
 		$this->country = $rowData['country'];
 		$this->username = !empty($rowData['username']) ? $rowData['username'] : null;
