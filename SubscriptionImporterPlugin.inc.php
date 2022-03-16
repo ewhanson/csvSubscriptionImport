@@ -74,7 +74,7 @@ class SubscriptionImporterPlugin extends \ImportExportPlugin
 	 */
 	function executeCLI($scriptName, &$args)
 	{
-		if (count($args) <=4) {
+		if (count($args) <4) {
 			$this->usage($scriptName);
 			exit();
 		}
