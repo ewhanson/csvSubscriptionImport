@@ -37,6 +37,7 @@ class SubscriptionImporterPlugin extends \ImportExportPlugin
 
 	/** @var array Subscriber[] */
 	private array $newSubscribers = [];
+	private \IndividualSubscriptionDAO $individualSubscriptionDao;
 
 	function register($category, $path, $mainContextId = null)
 	{
@@ -125,6 +126,7 @@ class SubscriptionImporterPlugin extends \ImportExportPlugin
 		try {
 			$this->setContext();
 			$this->setSubscribers();
+			$this->cacheDaos();
 		} catch (\Exception $exception) {
 			echo $exception->getMessage() . PHP_EOL;
 			exit();
@@ -136,13 +138,10 @@ class SubscriptionImporterPlugin extends \ImportExportPlugin
 	 */
 	private function processSubscriber(Subscriber $subscriber)
 	{
-		/** @var \IndividualSubscriptionDAO $individualSubscriptionDao */
-		$individualSubscriptionDao = \DAORegistry::getDAO('IndividualSubscriptionDAO');
-
 		// Check if user exists
 		if ($subscriber->hasExistingUser()) {
 			// If they do, check if they have an existing subscription
-			if ($individualSubscriptionDao->subscriptionExistsByUserForJournal($subscriber->getUser()->getId(), $this->context->getId())) {
+			if ($this->individualSubscriptionDao->subscriptionExistsByUserForJournal($subscriber->getUser()->getId(), $this->context->getId())) {
 				// If so, update their subscription expiry and status
 				$this->updateSubscriptionStatus($this->context, $subscriber);
 			} else {
@@ -285,5 +284,10 @@ class SubscriptionImporterPlugin extends \ImportExportPlugin
 		}
 
 		return $data;
+	}
+
+	private function cacheDaos()
+	{
+		$this->individualSubscriptionDao = \DAORegistry::getDAO('IndividualSubscriptionDAO');
 	}
 }
