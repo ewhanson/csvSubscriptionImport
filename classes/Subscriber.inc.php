@@ -62,13 +62,17 @@ class Subscriber
 	{
 		/** @var UserDAO $userDao */
 		$userDao = DAORegistry::getDAO('UserDAO');
+
 		if ($this->username) {
 			$user = $userDao->getByUsername($this->username);
 		} else {
 			$user = $userDao->getUserByEmail($this->email);
 		}
+
 		if ($user) {
 			$this->user = $user;
+			$this->username = $user->getUsername();
+
 			return true;
 		}
 
@@ -150,7 +154,7 @@ class Subscriber
 			'lastname' => $this->lastName,
 			'email' => $this->email,
 			'username' => $this->username,
-			'tempPassword' => $this->tempPassword,
+			'tempPassword' => $this->status == Subscriber::STATUS_NEW ? $this->tempPassword : '',
 			'country' => $this->country,
 			'status' => $this->status,
 
